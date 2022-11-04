@@ -1,0 +1,48 @@
+name: Pandas, numpy and requests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "taxonomies/*"
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ${{ github.repository }}/pandas-requests
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v2
+
+      - name: Log into Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_TOKEN }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Get current date (for tag)
+        id: getdate
+        run: echo ::set-output name=date::$(date +'%Y%m%d')
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: ./taxonomies/
+          file: "./taxonomies/Conteinerfile"
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.getdate.outputs.date }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:latest
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
